@@ -35,7 +35,8 @@ func handleMessages() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Print("upgrade:", err)
+		return
 	}
 	// Make sure we close the connection when the function returns
 	defer ws.Close()
