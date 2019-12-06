@@ -23,13 +23,24 @@ function drawPoint(new_x, new_y){
     context.closePath();
 }
 
-function YourNewPoint(x,y){
+function drawPointFromServer(new_x, new_y, old_x, old_y){ // Temporary workaround
+    context.beginPath();
+    context.strokeStyle = 'black';
+    context.lineWidth = 5;
+    context.lineCap = "round";
+    context.moveTo(new_x, new_y);
+    context.lineTo(old_x, old_y);
+    context.stroke();
+    context.closePath();
+}
+
+function YourNewPoint(new_x,new_y){
     socket.send(JSON.stringify({
-        new_x: x,
-        new_y: y,
+        new_x: new_x,
+        new_y: new_y,
         old_x: x,
         old_y: y
-    })) // add also new and old vars 
+    }))
     drawPoint(x,y)
 }
 
@@ -57,7 +68,10 @@ canvas.addEventListener('mouseup', function(event) {
     }
 })
 
-//socket.onmessage = function(event) {
-//   let data = JSON.parse(event.data)
-//    drawPoint(data.x,data.y)
-//};
+socket.onmessage = function(event) {
+   let data = JSON.parse(event.data)
+   drawPointFromServer(data.new_x,
+                       data.new_y,
+                       data.old_x,
+                       data.old_y)
+};
