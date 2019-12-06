@@ -12,8 +12,10 @@ var broadcast = make(chan Message)           // broadcast channel
 var upgrader = websocket.Upgrader{}
 
 type Message struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	OldX int `json:"old_x"`
+	OldY int `json:"old_y"`
+	NewX int `json:"new_x"`
+	NewY int `json:"new_y"`
 }
 
 func handleMessages() {
