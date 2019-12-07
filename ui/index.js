@@ -35,12 +35,14 @@ function drawPointFromServer(new_x, new_y, old_x, old_y){ // Temporary workaroun
 }
 
 function YourNewPoint(new_x,new_y){
-    socket.send(JSON.stringify({
-        new_x: new_x,
-        new_y: new_y,
-        old_x: x,
-        old_y: y
-    }))
+    if (socket.readyState == socket.OPEN) { // to avoid sending messages to nowhere
+        socket.send(JSON.stringify({
+            new_x: new_x,
+            new_y: new_y,
+            old_x: x,
+            old_y: y
+        }))
+    }
     drawPoint(x,y)
 }
 
