@@ -9,21 +9,7 @@ let y = 0;
 canvas.width  = window.innerWidth-20;
 canvas.height = window.innerHeight-20;
 
-function drawPoint(new_x, new_y){
-    old_x = x
-    old_y = y
-
-    context.beginPath();
-    context.strokeStyle = 'black';
-    context.lineWidth = 5;
-    context.lineCap = "round";
-    context.moveTo(new_x, new_y);
-    context.lineTo(old_x, old_y);
-    context.stroke();
-    context.closePath();
-}
-
-function drawPointFromServer(new_x, new_y, old_x, old_y){ // Temporary workaround
+function drawPoint(new_x, new_y, old_x, old_y){
     context.beginPath();
     context.strokeStyle = 'black';
     context.lineWidth = 5;
@@ -43,7 +29,7 @@ function YourNewPoint(new_x,new_y){
             old_y: y
         }))
     }
-    drawPoint(x,y)
+    drawPoint(new_x,new_y,x,y)
 }
 
 canvas.addEventListener('mousedown', function(event) { 
@@ -72,7 +58,7 @@ canvas.addEventListener('mouseup', function(event) {
 
 socket.onmessage = function(event) {
    let data = JSON.parse(event.data)
-   drawPointFromServer(data.new_x,
+   drawPoint(data.new_x,
                        data.new_y,
                        data.old_x,
                        data.old_y)
