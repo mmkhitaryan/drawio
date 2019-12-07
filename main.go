@@ -16,6 +16,7 @@ type Message struct {
 	OldY int `json:"old_y"`
 	NewX int `json:"new_x"`
 	NewY int `json:"new_y"`
+	conn *websocket.Conn
 }
 
 func handleMessages() {
@@ -24,11 +25,13 @@ func handleMessages() {
 		msg := <-broadcast
 		// Send it out to every client that is currently connected
 		for client := range clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("error: %v", err)
-				client.Close()
-				delete(clients, client)
+			if client != msg.conn {
+				err := client.WriteJSON(msg)
+				if err != nil {
+					log.Printf("error: %v", err)
+					client.Close()
+					delete(clients, client)
+				}
 			}
 		}
 	}
@@ -46,7 +49,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		var msg Message
+		msg.conn = ws // Also include sener's conn object
 		// Read in a new message as JSON and map it to a Message object
+
 		err := ws.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("error: %v", err)
