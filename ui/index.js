@@ -1,4 +1,4 @@
-let socket = new WebSocket(`ws://${document.domain}:8080/ws`);
+let socket = new WebSocket(`ws://${location.host}/ws`);
 var canvas = document.querySelector("#can");
 var context = canvas.getContext("2d");
 
