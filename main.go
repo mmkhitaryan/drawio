@@ -12,8 +12,11 @@ var broadcast = make(chan Message)           // broadcast channel
 var upgrader = websocket.Upgrader{}
 
 type Message struct {
-	X int `json:"x"`
-	Y int `json:"y"`
+	OldX int `json:"old_x"`
+	OldY int `json:"old_y"`
+	NewX int `json:"new_x"`
+	NewY int `json:"new_y"`
+	conn *websocket.Conn
 }
 
 func handleMessages() {
@@ -22,11 +25,13 @@ func handleMessages() {
 		msg := <-broadcast
 		// Send it out to every client that is currently connected
 		for client := range clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("error: %v", err)
-				client.Close()
-				delete(clients, client)
+			if client != msg.conn {
+				err := client.WriteJSON(msg)
+				if err != nil {
+					log.Printf("error: %v", err)
+					client.Close()
+					delete(clients, client)
+				}
 			}
 		}
 	}
@@ -35,7 +40,8 @@ func handleMessages() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Print("upgrade:", err)
+		return
 	}
 	// Make sure we close the connection when the function returns
 	defer ws.Close()
@@ -43,7 +49,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		var msg Message
+		msg.conn = ws // Also include sener's conn object
 		// Read in a new message as JSON and map it to a Message object
+
 		err := ws.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("error: %v", err)
@@ -56,7 +64,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	fs := http.FileServer(http.Dir("dist"))
+	http.Handle("/", fs)
+
 	http.HandleFunc("/ws", handler)
 	go handleMessages()
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 }

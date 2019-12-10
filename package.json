@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "parcel-bundler": "^1.12.4"
+  },
+  "scripts": {
+    "dev": "parcel ui/index.html",
+    "build": "parcel build ui/index.html"
+  }
+}
