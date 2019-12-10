@@ -1,0 +1,20 @@
+name: Byrd pro API CI/CD workflow
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: deploy code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Docker Swarm Deploy
+        uses: sagebind/docker-swarm-deploy-action@1.0.0
+        continue-on-error: false
+        with:
+           args: stack deploy up -c docker-compose.yml
+        env:
+          DOCKER_SSH_PRIVATE_KEY: ${{ secrets.DOCKER_SSH_PRIVATE_KEY }}
+          DOCKER_SSH_PUBLIC_KEY:  ${{ secrets.DOCKER_SSH_PUBLIC_KEY }}
+          DOCKER_REMOTE_HOST:     ${{ secrets.DOCKER_REMOTE_HOST }}
