@@ -1,6 +1,7 @@
 FROM node:8 as front
 WORKDIR /app
 COPY . .
+WORKDIR /app/web
 RUN yarn install
 RUN yarn run build
 
