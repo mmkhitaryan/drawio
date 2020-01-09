@@ -3,15 +3,19 @@ package main
 import (
 	"context"
 	"github.com/gorilla/websocket"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"runtime"
 	"sync"
 )
 
 var clients = &sync.Map{}
 var broadcast = make(chan Data, 100000)
 var upgrader = websocket.Upgrader{}
+var pool = &sync.Pool{New: func() interface{} {
+	return make([]byte, 0, 512)
+}}
 
 type Data struct {
 	mType   int
@@ -25,8 +29,8 @@ func handleMessages() {
 			log.Println(err)
 		}
 	}()
-	for {
-		msg := <-broadcast
+
+	for msg := range broadcast {
 		clients.Range(func(key, value interface{}) bool {
 			key.(chan Data) <- msg
 			return true
@@ -34,22 +38,13 @@ func handleMessages() {
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-
-	log.Println(ws.RemoteAddr().String(), "accept")
+func writer(ctx context.Context, ws *websocket.Conn) {
 	var message = make(chan Data, 100000)
 	defer func() {
-		ws.Close()
 		clients.Delete(message)
 		close(message)
 	}()
-
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	clients.Store(message, cancel)
 
 	for {
@@ -68,24 +63,44 @@ func handler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-		default:
-			var d Data
-			mtype, reader, err := ws.NextReader()
-			if err != nil {
-				log.Println(ws.RemoteAddr().String(), err)
-				return
-			}
-
-			buf, err := ioutil.ReadAll(reader)
-			if err != nil {
-				log.Println(ws.RemoteAddr().String(), err)
-				continue
-			}
-			d.from = ws
-			d.mType = mtype
-			d.message = buf
-			broadcast <- d
 		}
+	}
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Print("upgrade:", err)
+		return
+	}
+	log.Println(ws.RemoteAddr().String(), "accept")
+	defer ws.Close()
+
+	go writer(context.Background(), ws)
+
+	for {
+		mt, reader, err := ws.NextReader()
+		if err != nil {
+			log.Println(ws.RemoteAddr().String(), err)
+			return
+		}
+
+		buf := pool.Get().([]byte)
+		//насыщаем буфер по размеру капасити, небольшой хак т.к io.Read не умеет в апенды
+		buf = buf[:cap(buf)]
+		n, err := reader.Read(buf)
+		if err != nil && err != io.ErrUnexpectedEOF {
+			log.Println(ws.RemoteAddr().String(), err)
+			return
+		}
+
+		broadcast <- Data{from: ws, mType: mt, message: buf[:n]}
+
+		//очищаем буфер
+		buf = buf[:0]
+		pool.Put(buf)
+
+		runtime.Gosched()
 	}
 }
 
@@ -96,5 +111,5 @@ func main() {
 	http.HandleFunc("/ws", handler)
 	go handleMessages()
 	log.Println("run")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":80", nil))
 }
