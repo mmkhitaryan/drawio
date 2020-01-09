@@ -1,39 +1,36 @@
 package main
 
 import (
+	"context"
+	"github.com/gorilla/websocket"
+	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/websocket"
+	"sync"
 )
 
-var clients = make(map[*websocket.Conn]bool) // connected clients
-var broadcast = make(chan Message)           // broadcast channel
+var clients = &sync.Map{}
+var broadcast = make(chan Data, 100000)
 var upgrader = websocket.Upgrader{}
 
-type Message struct {
-	OldX int `json:"old_x"`
-	OldY int `json:"old_y"`
-	NewX int `json:"new_x"`
-	NewY int `json:"new_y"`
-	conn *websocket.Conn
+type Data struct {
+	mType   int
+	message []byte
+	from    *websocket.Conn
 }
 
 func handleMessages() {
-	for {
-		// Grab the next message from the broadcast channel
-		msg := <-broadcast
-		// Send it out to every client that is currently connected
-		for client := range clients {
-			if client != msg.conn {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					log.Printf("error: %v", err)
-					client.Close()
-					delete(clients, client)
-				}
-			}
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println(err)
 		}
+	}()
+	for {
+		msg := <-broadcast
+		clients.Range(func(key, value interface{}) bool {
+			key.(chan Data) <- msg
+			return true
+		})
 	}
 }
 
@@ -43,31 +40,61 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
-	// Make sure we close the connection when the function returns
-	defer ws.Close()
-	clients[ws] = true
+
+	log.Println(ws.RemoteAddr().String(), "accept")
+	var message = make(chan Data, 100000)
+	defer func() {
+		ws.Close()
+		clients.Delete(message)
+		close(message)
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	clients.Store(message, cancel)
 
 	for {
-		var msg Message
-		msg.conn = ws // Also include sener's conn object
-		// Read in a new message as JSON and map it to a Message object
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-message:
+			if msg.from != ws {
+				writer, err := ws.NextWriter(msg.mType)
+				if err != nil {
+					log.Println(ws.RemoteAddr().String(), err)
+					return
+				}
+				if _, err := writer.Write(msg.message); err != nil {
+					log.Println(ws.RemoteAddr().String(), err)
+					return
+				}
+			}
+		default:
+			var d Data
+			mtype, reader, err := ws.NextReader()
+			if err != nil {
+				log.Println(ws.RemoteAddr().String(), err)
+				return
+			}
 
-		err := ws.ReadJSON(&msg)
-		if err != nil {
-			log.Printf("error: %v", err)
-			delete(clients, ws)
-			break
+			buf, err := ioutil.ReadAll(reader)
+			if err != nil {
+				log.Println(ws.RemoteAddr().String(), err)
+				continue
+			}
+			d.from = ws
+			d.mType = mtype
+			d.message = buf
+			broadcast <- d
 		}
-		// Send the newly received message to the broadcast channel
-		broadcast <- msg
 	}
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("web/dist"))
+	fs := http.FileServer(http.Dir("web"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/ws", handler)
 	go handleMessages()
-	log.Fatal(http.ListenAndServe(":80", nil))
+	log.Println("run")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
