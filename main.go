@@ -1,15 +1,15 @@
 package main
 
 import (
+	"encoding/json"
+	"golang.org/x/net/websocket"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/websocket"
+	//"github.com/gorilla/websocket"
 )
 
-var clients = make(map[*websocket.Conn]bool) // connected clients
-var broadcast = make(chan Message)           // broadcast channel
-var upgrader = websocket.Upgrader{}
+var clients = NewClientsPool()           // connected clients
+var broadcast = make(chan Message, 1000) // broadcast channel
 
 type Message struct {
 	OldX int `json:"old_x"`
@@ -24,38 +24,35 @@ func handleMessages() {
 		// Grab the next message from the broadcast channel
 		msg := <-broadcast
 		// Send it out to every client that is currently connected
-		for client := range clients {
-			if client != msg.conn {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					log.Printf("error: %v", err)
-					client.Close()
-					delete(clients, client)
+		body, _ := json.Marshal(msg)
+		for _, client := range clients.GetAll() {
+			go func(client *websocket.Conn) {
+				if client != msg.conn {
+					n, err := client.Write(body)
+					if err != nil || n == 0 {
+						log.Printf("error: %v", err)
+						clients.Del(msg.conn)
+					}
 				}
-			}
+			}(client)
 		}
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	// Make sure we close the connection when the function returns
-	defer ws.Close()
-	clients[ws] = true
+func handler(ws *websocket.Conn) {
+
+	clients.Add(ws)
 
 	for {
 		var msg Message
 		msg.conn = ws // Also include sener's conn object
 		// Read in a new message as JSON and map it to a Message object
 
-		err := ws.ReadJSON(&msg)
+		dec := json.NewDecoder(ws)
+		err := dec.Decode(&msg)
 		if err != nil {
 			log.Printf("error: %v", err)
-			delete(clients, ws)
+			clients.Del(ws)
 			break
 		}
 		// Send the newly received message to the broadcast channel
@@ -64,10 +61,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("web/dist"))
+	fs := http.FileServer(http.Dir("./web"))
 	http.Handle("/", fs)
 
-	http.HandleFunc("/ws", handler)
+	http.Handle("/ws", websocket.Handler(handler))
 	go handleMessages()
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
