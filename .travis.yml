@@ -8,6 +8,7 @@ install: true
 env:
   global:
     - MYAPP=drawio
+    - COMMIT=${TRAVIS_COMMIT::7}
 
 before_install:
   - sudo apt-get -qq update
@@ -22,9 +23,10 @@ install:
   - mkdir -p build/amd64
   - GOOS=linux GOARCH=amd64 go build -o build/amd64/${MYAPP} *.go
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker build -t drawio .
-  - docker images
-  - docker tag ${TRAVIS_BUILD_NUMBER} $DOCKER_USERNAME/drawio
-  - docker push $DOCKER_USERNAME/drawio
+  - export DRAWIO=allinse/drawio
+  - docker build -t drawio:$COMMIT .
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - docker tag $DRAWIO:$COMMIT $DRAWIO:$TAG
+  - docker push $DRAWIO
 
 script: echo "good passed"
