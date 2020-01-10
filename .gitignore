@@ -8,7 +8,7 @@
 *.so
 *.dylib
 
-#js package-lock not necessary
+#js lock not necessary
 /web/package-lock.json
 yarn.lock
 
