@@ -1,6 +1,8 @@
 #idea
 .idea
 .idea/
+#Build folder
+build
 # Binaries for programs and plugins
 *.exe
 *.exe~

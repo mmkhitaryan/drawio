@@ -1,0 +1,33 @@
+language: go
+
+go:
+  - tip # The latest version of Go.
+
+install: true
+
+env:
+  global:
+    - MYAPP=drawio
+
+before_install:
+  - sudo apt-get -qq update
+
+services:
+  - docker
+
+install:
+  - go get -u github.com/OrlovEvgeny/$MYAPP
+  - cd $GOPATH/src/github.com/OrlovEvgeny/$MYAPP
+  - go install
+
+script: echo "pass"
+
+# build the app,build the package
+before_deploy:
+  - mkdir -p build/amd64
+  - GOOS=linux GOARCH=amd64 go build -o build/amd64/${MYAPP} *.go
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t drawio .
+  - docker images
+  - docker tag drawio $DOCKER_USERNAME/drawio
+  - docker push $DOCKER_USERNAME/drawio
