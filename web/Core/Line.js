@@ -83,8 +83,17 @@ export default class Line {
         return this._points.length < 2;
     }
 
+    /**
+     * Serialize object to json
+     */
     serialize() {
-        //TODO: serialize data for ws
-        return this;
+        let data = {
+            points: [],
+            color: this._color
+        };
+        this._points.map(point => {
+            data.points.push([point.getX(), point.getY()]);
+        });
+        return JSON.stringify(data);
     }
 }
