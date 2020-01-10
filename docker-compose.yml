@@ -1,8 +1,11 @@
-version: "3"
+version: '2'
 services:
-  web:
-    build: ./
+  drawio:
+    image: allinse/drawio
+    restart: always
     ports:
-      - '80:80'
-    volumes:
-      - ./:/app
+      - 80:80
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
