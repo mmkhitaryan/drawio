@@ -19,11 +19,6 @@ install:
   - go get -u github.com/OrlovEvgeny/$MYAPP
   - cd $GOPATH/src/github.com/OrlovEvgeny/$MYAPP
   - go install
-
-script: echo "pass"
-
-# build the app,build the packag
-before_deploy:
   - mkdir -p build/amd64
   - GOOS=linux GOARCH=amd64 go build -o build/amd64/${MYAPP} *.go
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
@@ -31,3 +26,5 @@ before_deploy:
   - docker images
   - docker tag drawio $DOCKER_USERNAME/drawio
   - docker push $DOCKER_USERNAME/drawio
+
+script: echo "pass"
