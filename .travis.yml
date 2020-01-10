@@ -24,7 +24,7 @@ install:
   - GOOS=linux GOARCH=amd64 go build -o build/amd64/${MYAPP} *.go
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - export DRAWIO=allinse/drawio
-  - docker build -t drawio:$COMMIT .
+  - docker build -t $DRAWIO:$COMMIT .
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   - docker tag $DRAWIO:$COMMIT $DRAWIO:$TAG
   - docker push $DRAWIO

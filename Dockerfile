@@ -10,5 +10,5 @@ WORKDIR /root/
 COPY --from=front /app .
 COPY ./build/amd64/drawio .
 
-CMD ["./drawio"]
+ENTRYPOINT ["/root/drawio"]
 EXPOSE 80
