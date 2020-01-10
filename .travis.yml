@@ -22,7 +22,7 @@ install:
 
 script: echo "pass"
 
-# build the app,build the package
+# build the app,build the packag
 before_deploy:
   - mkdir -p build/amd64
   - GOOS=linux GOARCH=amd64 go build -o build/amd64/${MYAPP} *.go
