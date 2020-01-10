@@ -24,7 +24,7 @@ install:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - docker build -t drawio .
   - docker images
-  - docker tag drawio $DOCKER_USERNAME/drawio
+  - docker tag ${TRAVIS_BUILD_NUMBER} $DOCKER_USERNAME/drawio
   - docker push $DOCKER_USERNAME/drawio
 
 script: echo "good passed"
