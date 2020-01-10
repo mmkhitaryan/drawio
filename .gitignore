@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+#js package-lock not necessary
+/web/package-lock.json
+
 # Test binary, build with `go test -c`
 *.test
 
