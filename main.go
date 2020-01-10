@@ -127,7 +127,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("web"))
+	fs := http.FileServer(http.Dir("web/dist"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/ws", handler)
