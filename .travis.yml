@@ -27,4 +27,4 @@ install:
   - docker tag drawio $DOCKER_USERNAME/drawio
   - docker push $DOCKER_USERNAME/drawio
 
-script: echo "pass"
+script: echo "good passed"
