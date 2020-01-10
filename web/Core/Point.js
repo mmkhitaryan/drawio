@@ -1,74 +1,82 @@
 export default class Point {
     /**
+     * Point constructor
+     * @param {Number} x
+     * @param {Number} y
+     */
+    constructor(x, y) {
+        this._x = x;
+        this._y = y;
+    }
+
+    /**
+     * Get point X
+     */
+    getX() {
+        return this._x;
+    }
+
+    /**
+     * Get point Y
+     */
+    getY() {
+        return this._y;
+    }
+
+    /**
      * Get angle and distance by start and end points
      *
-     * @param {Object} a
-     * @param {Object} b
+     * @param {Point} point
      * @returns {Object}
      */
-    static getAngleAndDistance(a, b) {
+     getAngleAndDistance(point) {
         return {
-            angle:  Math.atan2(b.y - a.y, b.x - a.x) * (180/Math.PI),
-            distance: Math.sqrt(Math.pow((b.y - a.y), 2) + Math.pow((b.x - a.x), 2))
+            angle:  Math.atan2(point.getY() - this._y, point.getX() - this._x) * (180/Math.PI),
+            distance: Math.sqrt(Math.pow((point.getY() - this._y), 2) + Math.pow((point.getX() - this._x), 2))
         }
     }
 
     /**
      * Get endpoint of line by angle and distance
      *
-     * @param {Object} a
      * @param {Number} angle
      * @param {Number} distance
      * @returns {Object}
      */
-    static getEndPoint(a, angle, distance) {
+    getEndPoint(angle, distance) {
         const radians = angle/(180/Math.PI);
-        return {
-            x: (Math.cos(radians) * distance) + a.x,
-            y: (Math.sin(radians) * distance) + a.y
-        }
+
+        return new Point((Math.cos(radians) * distance) + this._x, (Math.sin(radians) * distance) + this._y);
     }
 
     /**
      * Encode point to uint16 array
      *
-     * @param {Object} point
      * @returns {Uint16Array}
      */
-    static encodePoint(point) {
+    getEncodedPoint() {
         return new Uint16Array([
-            parseInt(point.x, 10),
-            parseInt(point.y, 10)
+            parseInt(this._x, 10),
+            parseInt(this._y, 10)
         ]);
-    }
-
-    /**
-     * Decode uint16 array to object
-     *
-     * @param {Uint16Array} encoded
-     * @returns {Object}
-     */
-    static decodePoint(encoded) {
-        return {
-            x: encoded[0],
-            y: encoded[1]
-        };
     }
 
     /**
      * Calc distance to move brush
      *
-     * @param {Object} point
-     * @param Object} options
+     * @param {Point} point
+     * @param {Object} options
      * @param {Number} distance
      * @return {Object}
      */
     static calcNewPoint(point, options, distance)
     {
-        //TODO: Write moving algorithm
+        const least = distance - options.distance;
+        point = point.getEndPoint(options.angle, least < 0 ? distance : options.distance);
+
         return {
             point: point,
-            distance: distance
+            distance: least
         };
     }
 }

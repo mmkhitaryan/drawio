@@ -1,3 +1,5 @@
+import Line from "./Line.js";
+
 export default class Connect {
     /**
      * Connect constructor
@@ -11,15 +13,24 @@ export default class Connect {
             let data = JSON.parse(event.data);
             callback(data);
         };
+        this._stack = [];
     }
 
     /**
      * Send line to ws server
      *
-     * @param {Array} points
+     * @param {Line} line
      * @returns {Boolean}
      */
-    sendLine(points) {
+    sendLine(line) {
+        this._stack.push(line);
+        return this;
+    }
+
+    /**
+     * Send stack to server
+     */
+    send() {
         if (this._socket.readyState == this._socket.OPEN) {
             this._socket.send(points);
             return true;

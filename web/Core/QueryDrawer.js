@@ -1,4 +1,5 @@
-import Point from "./Point";
+import Point from "./Point.js";
+import Line from "./Line.js";
 
 export default class QueryDrawer {
     /**
@@ -11,26 +12,30 @@ export default class QueryDrawer {
         this._speed = speed;
         this._context = canvas.getContext("2d");
         this._query = [];
-        this._ownLine = [];
+        this._ownLine = new Line();
         window.requestAnimationFrame(this.render);
     }
 
     /**
      * Add line to drawing query
      *
-     * @param {Array} points
+     * @param {Line} line
      */
-    addQuery(points) {
-        this._query.push(points);
+    addQuery(line) {
+        this._query.push(line);
     }
 
     /**
-     * Add line to drawing query
+     * Add line to draw
      *
-     * @param {Uint16Array} points
+     * @param {Point} point
+     * @param {String|null} color
      */
-    addToLine(point) {
-        this._ownLine.push(point);
+    addToLine(point, color) {
+        this._ownLine.addPoint(point);
+        if(color) {
+            this._ownLine.setColor(color);
+        }
     }
 
     /**
@@ -49,10 +54,13 @@ export default class QueryDrawer {
         const distance = speed * (timestamp - this.start);
         this.start = timestamp;
 
-        this._query.map(points => {
-            return this.drawDistance(points, distance);
+        /**
+         * @var {Line} line
+         */
+        this._query.map(line => {
+            return this.drawDistance(line, distance);
         }).filter(points => {
-            return points.length > 1;
+            return !line.isEnded;
         });
 
         if(this._ownLine.length > 1) {
@@ -60,40 +68,48 @@ export default class QueryDrawer {
         }
     }
 
-    clearLine() {
-        this._ownLine = [];
+    /**
+     * Clear line
+     *
+     * @param {String|null} color
+     */
+    clearLine(color) {
+        if(!this._ownLine.isEnded()) {
+            let line = this._ownLine;
+            this._query.push(line);
+        }
+        this._ownLine = new Line([], color || '#000000');
     }
 
     /**
      * Drawing line per frame
      *
-     * @param {Array} points
+     * @param {Line} points
      * @param {Number} distance
      * @returns {Array}
      */
-    drawDistance(points, distance) {
-        const oldPoint = Point.decodePoint(points[0]);
-        let newPoint = Point.decodePoint(points[1]);
-        const options = Point.getAngleAndDistance(oldPoint, newPoint);
-        const data = Point.calcNewPoint(oldPoint, options, distance);
-        newPoint = data.point;
+    drawDistance(line, distance) {
+        const data = line.getDrawIteration();
+        line.shift();
+        const options = data.A.getAngleAndDistance(data.B);
+        const newData = Point.calcNewPoint(data.A, options, distance);
+        const newPoint = newData.point;
 
         this._context.beginPath();
         this._context.strokeStyle = 'black';
         this._context.lineWidth = 5;
         this._context.lineCap = "round";
         this._context.moveTo(newPoint.x, newPoint.y);
-        this._context.lineTo(oldPoint.x, oldPoint.y);
+        this._context.lineTo(data.A.getX(), data.A.getY());
         this._context.stroke();
         this._context.closePath();
-        points.shift();
 
-        if(data.distance > 0 && points.length > 1) {
-            points = this.drawDistance(points, data.distance);
-        } else if(data.distance < 0) {
-            points.unshift(data.newPoint);
+        if(newData.distance > 0 && points.length > 1) {
+            line = this.drawDistance(line, newData.distance);
+        } else if(newData.distance < 0) {
+            line.unshift(newPoint);
         }
 
-        return points;
+        return line;
     }
 }
