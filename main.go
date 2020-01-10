@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
+	"sync/atomic"
 )
 
 var clients = &sync.Map{}
 var broadcast = make(chan Data, 100000)
 var upgrader = websocket.Upgrader{}
+var onlineAtom int64
 var pool = &sync.Pool{New: func() interface{} {
 	return make([]byte, 0, 512)
 }}
@@ -23,10 +25,24 @@ type Data struct {
 	from    *websocket.Conn
 }
 
+func IncAtom(i *int64) {
+	atomic.AddInt64(i, 1)
+}
+
+func DecrAtom(i *int64) {
+	atomic.AddInt64(i, -1)
+}
+
+func LoadAtom(i *int64) int64 {
+	return atomic.LoadInt64(i)
+}
+
+//handleMessages
 func handleMessages() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
+			handleMessages()
 		}
 	}()
 
@@ -38,6 +54,7 @@ func handleMessages() {
 	}
 }
 
+//writer
 func writer(ctx context.Context, ws *websocket.Conn) {
 	var message = make(chan Data, 100000)
 	defer func() {
@@ -67,6 +84,7 @@ func writer(ctx context.Context, ws *websocket.Conn) {
 	}
 }
 
+//handler
 func handler(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -74,7 +92,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(ws.RemoteAddr().String(), "accept")
-	defer ws.Close()
+	IncAtom(&onlineAtom)
+	defer func() {
+		DecrAtom(&onlineAtom)
+		ws.Close()
+	}()
 
 	go writer(context.Background(), ws)
 
