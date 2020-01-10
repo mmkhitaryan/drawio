@@ -5,10 +5,10 @@ WORKDIR /app/web
 RUN yarn install
 RUN yarn run build
 
-FROM golang:latest
+FROM scratch
 WORKDIR /root/
 COPY --from=front /app .
-RUN go get -d -v ./...
-RUN go build -o main .
-CMD ["./main"]
+COPY ./build/amd64/drawio .
+
+CMD ["./drawio"]
 EXPOSE 80
