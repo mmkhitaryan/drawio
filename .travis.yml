@@ -21,7 +21,7 @@ install:
   - cd $GOPATH/src/github.com/mmkhitaryan/$MYAPP
   - go install
   - mkdir -p build/linux
-  - GOOS=linux GOARCH=amd64 go build -o build/linux/${MYAPP} *.go
+  - GOOS=linux GOARCH=amd64 go build -o build/linux/$MYAPP *.go
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - export DRAWIO=allinse/drawio
   - docker build -t $DRAWIO:$COMMIT .

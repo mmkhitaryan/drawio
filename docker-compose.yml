@@ -1,7 +1,7 @@
 version: '2'
 services:
   drawio:
-    image: allinse/drawio
+    image: allinse/drawio:latest
     restart: always
     ports:
       - 80:80
