@@ -17,8 +17,8 @@ services:
   - docker
 
 install:
-  - go get -u github.com/OrlovEvgeny/$MYAPP
-  - cd $GOPATH/src/github.com/OrlovEvgeny/$MYAPP
+  - go get -u github.com/mmkhitaryan/$MYAPP
+  - cd $GOPATH/src/github.com/mmkhitaryan/$MYAPP
   - go install
   - mkdir -p build/amd64
   - GOOS=linux GOARCH=amd64 go build -o build/linux/${MYAPP} *.go
