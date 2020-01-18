@@ -32,7 +32,7 @@ function YourNewPoint(new_x,new_y){
     drawPoint(new_x,new_y,x,y)
 }
 
-canvas.addEventListener('mousedown', function(event) { 
+canvas.addEventListener('mousedown', function(event) {
     x = event.pageX - canvas.offsetLeft;
     y = event.pageY - canvas.offsetTop;
     isDrawing = true;

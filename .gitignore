@@ -10,6 +10,10 @@ build
 *.so
 *.dylib
 
+#js lock not necessary
+/web/package-lock.json
+yarn.lock
+
 # Test binary, build with `go test -c`
 *.test
 
@@ -57,6 +61,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+dist/
 jspm_packages/
 
 # TypeScript v1 declaration files

@@ -1,4 +1,7 @@
-## What is this
+# What is this
+
+[![Build Status](https://travis-ci.org/OrlovEvgeny/drawio.svg?branch=master)](https://travis-ci.org/mmkhitaryan/drawio)
+
 A simple drawing web application, you can draw something on the canvas and your drawings will distribute across all connected users.
 
 ## Project goals
