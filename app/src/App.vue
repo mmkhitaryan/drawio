@@ -1,10 +1,10 @@
 <template>
   <v-app>
-    <v-content>
+    <v-content :style="{'overflowX': 'scroll'}">
       <drawer @draw="progressUp()" ref="drawer"></drawer>
-      <colorpicker @change="setColor"></colorpicker>
-      <progress-bar :blocked="blocked" :progress="progress"></progress-bar>
     </v-content>
+    <colorpicker @change="setColor"></colorpicker>
+    <progress-bar :blocked="blocked" :progress="progress"></progress-bar>
   </v-app>
 </template>
 
@@ -52,3 +52,9 @@ export default {
   }
 };
 </script>
+
+<style>
+  .v-application--wrap, .v-content, .v-content__wrap{
+    max-width: none !important;
+  }
+</style>

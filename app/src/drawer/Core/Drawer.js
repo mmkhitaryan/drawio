@@ -96,11 +96,19 @@ export default class Drawer {
      * Canvas initialize
      */
     initialize() {
-        this._canvas.width  = window.innerWidth;
-        this._canvas.height = window.innerHeight;
+        this._canvas.width  = 5000;
+        this._canvas.height = 5000;
 
         this._canvas.addEventListener('mousedown', (event) => {
             if(!this._blocked) {
+                //eslint-disable-next-line
+                console.log(this._canvas.offsetLeft);
+                //eslint-disable-next-line
+                console.log(this._canvas.offsetTop);
+                //eslint-disable-next-line
+                console.log(event.pageX);
+                //eslint-disable-next-line
+                console.log( event.pageY);
                 const point = new Point(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
                 this.x = point.getX();
                 this.y = point.getY();
