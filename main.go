@@ -139,7 +139,7 @@ func (s *socket) reader() {
 		buf := pool.Get().([]byte)
 		//насыщаем буфер по размеру капасити, небольшой хак т.к io.Read не умеет в апенды
 		buf = buf[:cap(buf)]
-		n, err := reader.Read(buf)
+		n, err := io.ReadFull(reader, buf)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			log.Println(s.conn.RemoteAddr().String(), err)
 			return
@@ -224,7 +224,7 @@ func printVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("./dist"))
+	fs := http.FileServer(http.Dir("./web/dist"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/online", online)
