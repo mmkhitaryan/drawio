@@ -96,15 +96,15 @@ export default class Drawer {
      * Canvas initialize
      */
     initialize() {
-        this._canvas.width  = window.innerWidth - 20;
-        this._canvas.height = window.innerHeight - 20;
+        this._canvas.width  = window.innerWidth;
+        this._canvas.height = window.innerHeight;
 
         this._canvas.addEventListener('mousedown', (event) => {
             if(!this._blocked) {
                 const point = new Point(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
                 this.x = point.getX();
                 this.y = point.getY();
-                this.drawPoint(point);
+                this.drawPoint(point, this.line.getColor());
                 this._isDrawing = true;
             }
         });

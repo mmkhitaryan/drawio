@@ -19,13 +19,9 @@ export default {
     },
     methods: {
         blockBrush() {
-            //eslint-disable-next-line
-            console.log('block');
             drawer.block();
         },
         unblockBrush() {
-            //eslint-disable-next-line
-            console.log('unblock');
             drawer.unblock();
         },
         setColor(color) {

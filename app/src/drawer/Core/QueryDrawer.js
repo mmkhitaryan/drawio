@@ -100,7 +100,7 @@ export default class QueryDrawer {
         const newPoint = newData.point;
 
         this._context.beginPath();
-        this._context.strokeStyle = 'black';
+        this._context.strokeStyle = line.getColor();
         this._context.lineWidth = 5;
         this._context.lineCap = "round";
         this._context.moveTo(newPoint.getX(), newPoint.getY());
