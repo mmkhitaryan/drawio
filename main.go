@@ -224,7 +224,7 @@ func printVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	fs := http.FileServer(http.Dir("./dist"))
+	fs := http.FileServer(http.Dir("./web"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/online", online)

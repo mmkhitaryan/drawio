@@ -1,10 +1,3 @@
-FROM node:8 as front
-RUN mkdir -p /home/go/app/web
-COPY ./web /home/go/app/web
-WORKDIR /home/go/app/web
-RUN yarn install
-RUN yarn run build
-
 FROM golang:1.13.4-alpine as builder
 RUN apk add --update --no-cache bash tzdata git
 RUN go get -u github.com/mmkhitaryan/drawio
@@ -18,7 +11,7 @@ FROM scratch
 COPY --from=builder /home/go/app /home/go/app
 WORKDIR /home/go/app
 COPY --from=builder /home/go/app/drawio /home/go/app/drawio
-COPY --from=front /home/go/app/web/dist /home/go/app/dist
+COPY ./web /home/go/app/web
 WORKDIR /home/go/app
 EXPOSE 80
 ENTRYPOINT ["/home/go/app/drawio"]
