@@ -52,6 +52,10 @@ export default class Line {
         return this;
     }
 
+    length() {
+        return this._points.length;
+    }
+
     /**
      * Clear all line points
      */
@@ -66,7 +70,7 @@ export default class Line {
      * @returns {null|Object}
      */
     getDrawIteration() {
-        if(!this.isEnded) {
+        if(!this.isEnded()) {
             return {
                 A: this._points[0],
                 B: this._points[1],
