@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const quota = 1500
+const quota = 1800
 
 var clients = &sync.Map{}
 var broadcast = make(chan *Data, 100000)
@@ -69,7 +69,7 @@ func (s *socket) writer(ctx context.Context) {
 			return
 		case <-timer.C:
 			if s.statusQuotum() == 1 {
-				i := atomic.AddInt64(&s.quotum, -500)
+				i := atomic.AddInt64(&s.quotum, -600)
 				s.sendQuotum(i, 1)
 				if i <= 0 {
 					s.unlockQuotum()
