@@ -9,7 +9,7 @@ export default class Connect {
      * @param {Function} callback
      */
     constructor(host, callback) {
-        this._socket = new WebSocket(`ws://${host}/ws`);
+        this._socket = new WebSocket(`ws://127.0.0.1:80/ws`);
         this._socket.onmessage = (event) => {
             let package = JSON.parse(event.data);
             callback(package.data);
