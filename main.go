@@ -150,6 +150,9 @@ func (s *socket) reader() {
 
 //quotumAllow
 func (s *socket) quotumAllow(count int) (int64, bool) {
+	if s.statusQuotum() == 1 {
+		return atomic.LoadInt64(&s.quotum), false
+	}
 	i := atomic.LoadInt64(&s.quotum)
 	if i >= quota {
 		s.lockQuotum()
