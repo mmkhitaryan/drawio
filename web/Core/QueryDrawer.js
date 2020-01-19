@@ -52,6 +52,7 @@ export default class QueryDrawer {
         }
 
         const distance = this._speed * (timestamp - this.start);
+        const self_distance = 10 * (timestamp - this.start);
         this.start = timestamp;
 
         /**
@@ -67,7 +68,7 @@ export default class QueryDrawer {
         });
 
         if(!this._ownLine.isEnded()) {
-            this.drawDistance(this._ownLine, distance);
+            this.drawDistance(this._ownLine, self_distance);
         }
     }
 
