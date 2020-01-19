@@ -14,6 +14,7 @@ import (
 )
 
 const quota = 1800
+const version = "0.0.1"
 
 var clients = &sync.Map{}
 var broadcast = make(chan *Data, 100000)
@@ -217,11 +218,17 @@ func online(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, total)
 }
 
+//printVersion
+func printVersion(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, version)
+}
+
 func main() {
-	fs := http.FileServer(http.Dir("./web/dist"))
+	fs := http.FileServer(http.Dir("./dist"))
 	http.Handle("/", fs)
 
 	http.HandleFunc("/online", online)
+	http.HandleFunc("/version", printVersion)
 	http.HandleFunc("/ws", upgrade)
 	go handleMessages()
 	log.Println("run")
