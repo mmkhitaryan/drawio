@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
@@ -24,9 +25,6 @@ var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
 	return true
 }}
 var onlineAtom int64
-var pool = &sync.Pool{New: func() interface{} {
-	return make([]byte, 0, 512*5)
-}}
 
 //Data
 type Data struct {
@@ -80,30 +78,21 @@ func (s *socket) writer(ctx context.Context) {
 			if msg.from != s.conn || msg.force {
 				writer, err := s.conn.NextWriter(msg.mType)
 				if err != nil {
-					poolPut(msg.message)
 					log.Println(s.conn.RemoteAddr().String(), err)
 					return
 				}
 				if _, err := writer.Write(msg.message); err != nil {
-					poolPut(msg.message)
 					log.Println(s.conn.RemoteAddr().String(), err)
 					return
 				}
 
 				if err = writer.Close(); err != nil {
-					poolPut(msg.message)
 					log.Println(s.conn.RemoteAddr().String(), err)
 					return
 				}
-				poolPut(msg.message)
 			}
 		}
 	}
-}
-
-func poolPut(buf []byte) {
-	buf = buf[:0]
-	pool.Put(buf)
 }
 
 //socketPayload
@@ -136,29 +125,22 @@ func (s *socket) reader() {
 			return
 		}
 
-		buf := pool.Get().([]byte)
-		//насыщаем буфер по размеру капасити, небольшой хак т.к io.Read не умеет в апенды
-		buf = buf[:cap(buf)]
-		n, err := io.ReadFull(reader, buf)
+		buf, err := ioutil.ReadAll(reader)
 		if err != nil && err != io.ErrUnexpectedEOF {
 			log.Println(s.conn.RemoteAddr().String(), err)
 			return
 		}
 
-		log.Println(n, len(buf), cap(buf), string(buf))
 		var sp socketPayload
-		if err := json.Unmarshal(buf[:n], &sp); err != nil {
-			log.Println(string(buf[:n]))
+		if err := json.Unmarshal(buf, &sp); err != nil {
 			log.Println(err)
 		}
 
 		if countQuota, ok := s.quotumAllow(len(sp.Data.Points)); !ok {
 			s.sendQuotum(countQuota, mt)
-			buf = buf[:0]
-			pool.Put(buf)
 			continue
 		}
-		broadcast <- &Data{from: s.conn, mType: mt, force: false, message: buf[:n]}
+		broadcast <- &Data{from: s.conn, mType: mt, force: false, message: buf}
 	}
 }
 
