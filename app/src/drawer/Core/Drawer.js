@@ -15,12 +15,9 @@ export default class Drawer {
         this.y = 0;
         this.line = new Line();
         this._canvas = document.querySelector("#can");
-        this._qDrawer = new QueryDrawer(this._canvas, speed);
-        this.connect = new Connect(location.host /*'157.245.120.30'*/, (data) => {
-            let line = new Line(data.points.map(point => {
-                return new Point(point[0], point[1]);
-            }), data.color);
-            this._qDrawer.addQuery(line);
+        this._qDrawer = new QueryDrawer(this._canvas);
+        this.connect = new Connect(location.host, (data) => {
+            this._qDrawer.addQuery(data);
         });
         this.initialize();
     }
@@ -66,9 +63,6 @@ export default class Drawer {
             this._qDrawer.addToLine(point);
         }
         this.line.addPoint(point);
-        if(this.line.length() > 20) {
-            this.cut();
-        }
 
         return point;
     }
@@ -101,9 +95,9 @@ export default class Drawer {
             this.x = 0;
             this.y = 0;
             this._isDrawing = false;
-            this._qDrawer.clearLine(this.line.getColor());
             this.connect.sendLine(this.line.serialize());
             this.line = new Line([], this.line.getColor());
+            this._qDrawer.clearLine();
         });
     }
 }

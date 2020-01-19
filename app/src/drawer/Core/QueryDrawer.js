@@ -13,7 +13,7 @@ export default class QueryDrawer {
         this._context = canvas.getContext("2d");
         this._query = [];
         this._ownLine = new Line();
-        window.requestAnimationFrame((timestamp) => {this.render(timestamp);});
+        window.requestAnimationFrame(this.render);
     }
 
     /**
@@ -44,30 +44,27 @@ export default class QueryDrawer {
      * @param {Number} timestamp
      */
     render(timestamp) {
-        window.requestAnimationFrame((timestamp) => {this.render(timestamp);});
+        window.requestAnimationFrame(this.render);
 
         if(!this.start) {
             this.start = timestamp;
             return;
         }
 
-        const distance = this._speed * (timestamp - this.start);
+        const distance = speed * (timestamp - this.start);
         this.start = timestamp;
 
         /**
          * @var {Line} line
          */
-        this._query = this._query.map(line => {
-            if(!line.isEnded()) {
-                return this.drawDistance(line, distance);
-            }
-            return line;
-        }).filter(line => {
-            return !line.isEnded();
+        this._query.map(line => {
+            return this.drawDistance(line, distance);
+        }).filter(points => {
+            return !line.isEnded;
         });
 
-        if(!this._ownLine.isEnded()) {
-            this.drawDistance(this._ownLine, distance);
+        if(this._ownLine.length > 1) {
+            this.drawDistance(this._ownLine);
         }
     }
 
@@ -102,12 +99,12 @@ export default class QueryDrawer {
         this._context.strokeStyle = 'black';
         this._context.lineWidth = 5;
         this._context.lineCap = "round";
-        this._context.moveTo(newPoint.getX(), newPoint.getY());
+        this._context.moveTo(newPoint.x, newPoint.y);
         this._context.lineTo(data.A.getX(), data.A.getY());
         this._context.stroke();
         this._context.closePath();
 
-        if(newData.distance > 0 && !line.isEnded()) {
+        if(newData.distance > 0 && points.length > 1) {
             line = this.drawDistance(line, newData.distance);
         } else if(newData.distance < 0) {
             line.unshift(newPoint);
@@ -116,6 +113,7 @@ export default class QueryDrawer {
         return line;
     }
 
+    
     draw(from, to) {
         return [];
     }
