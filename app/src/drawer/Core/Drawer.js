@@ -16,7 +16,7 @@ export default class Drawer {
         this.line = new Line();
         this._canvas = document.querySelector("#can");
         this._qDrawer = new QueryDrawer(this._canvas);
-        this.connect = new Connect("127.0.0.1:80", (data) => {
+        this.connect = new Connect(location.host, (data) => {
             this._qDrawer.addQuery(data);
         });
         this.initialize();
