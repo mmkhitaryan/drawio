@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const quota = 300
+const quota = 1500
 
 var clients = &sync.Map{}
 var broadcast = make(chan Data, 100000)
@@ -23,7 +23,7 @@ var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
 }}
 var onlineAtom int64
 var pool = &sync.Pool{New: func() interface{} {
-	return make([]byte, 0, 512*2)
+	return make([]byte, 0, 512*10)
 }}
 
 //Data
@@ -68,7 +68,7 @@ func (s *socket) writer(ctx context.Context) {
 			return
 		case <-timer.C:
 			if s.statusQuotum() == 1 {
-				i := atomic.AddInt64(&s.quotum, -50)
+				i := atomic.AddInt64(&s.quotum, -500)
 				s.sendQuotum(i, 1)
 				if i <= 0 {
 					s.unlockQuotum()
