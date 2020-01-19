@@ -8,16 +8,21 @@ export default class Drawer {
      * Drawer constructor
      * @param {Number} speed
      */
-    constructor(speed) {
+    constructor(speed, host, drawCallback) {
         this._speed = speed;
         this._isDrawing = false;
+        this._blocked = false;
+        this._drawCallback = drawCallback;
         this.x = 0;
         this.y = 0;
         this.line = new Line();
         this._canvas = document.querySelector("#can");
-        this._qDrawer = new QueryDrawer(this._canvas);
-        this.connect = new Connect(location.host, (data) => {
-            this._qDrawer.addQuery(data);
+        this._qDrawer = new QueryDrawer(this._canvas, speed);
+        this.connect = new Connect(host, (data) => {
+            let line = new Line(data.points.map(point => {
+                return new Point(point[0], point[1]);
+            }), data.color);
+            this._qDrawer.addQuery(line);
         });
         this.initialize();
     }
@@ -48,6 +53,22 @@ export default class Drawer {
         return this;
     }
 
+    block() {
+        if (this._isDrawing) {
+            this.x = 0;
+            this.y = 0;
+            this._isDrawing = false;
+            this._qDrawer.clearLine(this.line.getColor());
+            this.connect.sendLine(this.line.serialize());
+            this.line = new Line([], this.line.getColor());
+        }
+        this._blocked = true;
+    }
+
+    unblock() {
+        this._blocked = false;
+    }
+
     /**
      * Draw user point
      *
@@ -63,6 +84,10 @@ export default class Drawer {
             this._qDrawer.addToLine(point);
         }
         this.line.addPoint(point);
+        if(this.line.length() > 20) {
+            this.cut();
+        }
+        this._drawCallback();
 
         return point;
     }
@@ -75,15 +100,17 @@ export default class Drawer {
         this._canvas.height = window.innerHeight - 20;
 
         this._canvas.addEventListener('mousedown', (event) => {
-            const point = new Point(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
-            this.x = point.getX();
-            this.y = point.getY();
-            this.drawPoint(point);
-            this._isDrawing = true;
+            if(!this._blocked) {
+                const point = new Point(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
+                this.x = point.getX();
+                this.y = point.getY();
+                this.drawPoint(point);
+                this._isDrawing = true;
+            }
         });
 
         this._canvas.addEventListener('mousemove', (event) => {
-            if (this._isDrawing) {
+            if (this._isDrawing && !this._blocked) {
                 const point = new Point(event.pageX - this._canvas.offsetLeft, event.pageY - this._canvas.offsetTop);
                 this.x = point.getX();
                 this.y = point.getY();
@@ -92,12 +119,14 @@ export default class Drawer {
         }, false);
 
         this._canvas.addEventListener('mouseup', () => {
-            this.x = 0;
-            this.y = 0;
-            this._isDrawing = false;
-            this.connect.sendLine(this.line.serialize());
-            this.line = new Line([], this.line.getColor());
-            this._qDrawer.clearLine();
+            if(this._isDrawing) {
+                this.x = 0;
+                this.y = 0;
+                this._isDrawing = false;
+                this._qDrawer.clearLine(this.line.getColor());
+                this.connect.sendLine(this.line.serialize());
+                this.line = new Line([], this.line.getColor());
+            }
         });
     }
 }
