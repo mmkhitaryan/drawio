@@ -144,6 +144,8 @@ func (s *socket) reader() {
 			log.Println(s.conn.RemoteAddr().String(), err)
 			return
 		}
+
+		log.Println(n, len(buf), cap(buf), string(buf))
 		var sp socketPayload
 		if err := json.Unmarshal(buf[:n], &sp); err != nil {
 			log.Println(string(buf[:n]))
