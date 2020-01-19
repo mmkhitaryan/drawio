@@ -17,7 +17,10 @@ const quota = 300
 
 var clients = &sync.Map{}
 var broadcast = make(chan Data, 100000)
-var upgrader = websocket.Upgrader{}
+//TODO временый костыйль с origin
+var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
+	return true
+}}
 var onlineAtom int64
 var pool = &sync.Pool{New: func() interface{} {
 	return make([]byte, 0, 512*2)
