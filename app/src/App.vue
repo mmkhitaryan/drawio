@@ -40,7 +40,7 @@ export default {
       }
     },
     progressDown() {
-      if(this.blocked) {
+      if(this.progress > 0) {
         this.progress -= 10;
         if(this.progress < 1) {
           this.$refs.drawer.unblockBrush();
