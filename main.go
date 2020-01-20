@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/ring"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,13 @@ const version = "0.0.3"
 
 var clients = &sync.Map{}
 var broadcast = make(chan *Data, 100000)
+var circularBuf = struct {
+	mu   *sync.RWMutex
+	rbuf *ring.Ring
+}{
+	mu:   &sync.RWMutex{},
+	rbuf: ring.New(1000),
+}
 
 //TODO временый костыйль с origin
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
@@ -115,6 +123,7 @@ func (s *socket) reader() {
 		close(s.message)
 		s.conn.Close()
 	}()
+	s.sendHistory()
 	clients.Store(s.message, struct{}{})
 	go s.writer(ctx)
 
@@ -141,7 +150,26 @@ func (s *socket) reader() {
 			continue
 		}
 		broadcast <- &Data{from: s.conn, mType: mt, force: false, message: buf}
+		circularBuf.mu.Lock()
+		circularBuf.rbuf.Value = buf
+		circularBuf.rbuf = circularBuf.rbuf.Next()
+		circularBuf.mu.Unlock()
 	}
+}
+
+func (s *socket) sendHistory() {
+	circularBuf.mu.RLock()
+	defer circularBuf.mu.RUnlock()
+	if circularBuf.rbuf.Len() < 1 {
+		return
+	}
+	circularBuf.rbuf.Do(func(msg interface{}) {
+		data, ok := msg.([]byte)
+		if !ok {
+			return
+		}
+		s.message <- Data{from: s.conn, mType: 1, force: true, message: data}
+	})
 }
 
 //quotumAllow
