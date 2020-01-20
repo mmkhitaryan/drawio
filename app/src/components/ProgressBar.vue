@@ -26,8 +26,6 @@ export default {
     computed: {
         dynamicHeight() {
             let height = (100 - parseInt(((this.progress / this.max) * 100), 10)) + '%';
-            //eslint-disable-next-line
-            console.log(height);
             return height;
         }
     }
