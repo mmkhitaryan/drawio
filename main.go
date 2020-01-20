@@ -153,7 +153,6 @@ func (s *socket) reader() {
 		circularBuf.mu.Lock()
 		circularBuf.rbuf.Value = buf
 		circularBuf.rbuf = circularBuf.rbuf.Next()
-		log.Println(circularBuf.rbuf.Len())
 		circularBuf.mu.Unlock()
 	}
 }
