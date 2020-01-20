@@ -21,32 +21,37 @@ export default {
   data: () => ({
     progress: 0,
     blocked: false,
-    timer: null
+    timer: null,
+    pause: 0
   }),
   created() {
     this.timer = setInterval(() => {
       this.progressDown();
-    }, 200);
+    }, 40);
   },
   methods: {
     setColor(color) {
       this.$refs.drawer.setColor(color)
     },
     progressUp() {
+      this.pause = 15;
       this.progress++;
       if(this.progress >= 240) {
         this.$refs.drawer.blockBrush();
         this.blocked = true;
+        this.pause = 0;
       }
     },
     progressDown() {
-      if(this.progress > 0) {
-        this.progress -= 10;
+      if(this.progress > 0 && this.pause === 0) {
+        this.progress -= 2;
         if(this.progress < 1) {
           this.$refs.drawer.unblockBrush();
           this.blocked = false;
         }
         this.progress = this.progress < 0 ? 0 : this.progress;
+      } else if(this.pause > 0) {
+        this.pause--;
       }
     }
   }
