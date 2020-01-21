@@ -16,26 +16,19 @@ import (
 )
 
 const quota = 1800
-const version = "0.0.3"
 
 var clients = &sync.Map{}
-var broadcast = make(chan *Data, 100000)
-var circularBuf = struct {
+var online int64
+var broadcast = make(chan *data, 100000)
+var circularBuf = &safeCircularBuffer{mu: &sync.RWMutex{}, rbuf: ring.New(1000)}
+
+type safeCircularBuffer struct {
 	mu   *sync.RWMutex
 	rbuf *ring.Ring
-}{
-	mu:   &sync.RWMutex{},
-	rbuf: ring.New(1000),
 }
 
-//TODO временый костыйль с origin
-var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool {
-	return true
-}}
-var onlineAtom int64
-
-//Data
-type Data struct {
+//data
+type data struct {
 	mType   int
 	force   bool
 	message []byte
@@ -45,23 +38,29 @@ type Data struct {
 //socket
 type socket struct {
 	conn       *websocket.Conn
-	message    chan Data
+	message    chan data
 	quotum     int64
 	quotumLock uint32
 }
+
+//TODO временый костыйль с origin
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	}}
 
 //handleMessages
 func handleMessages() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println(err)
-			handleMessages()
 		}
+		go handleMessages()
 	}()
 
 	for msg := range broadcast {
 		clients.Range(func(key, value interface{}) bool {
-			key.(chan Data) <- *msg
+			key.(chan data) <- *msg
 			return true
 		})
 	}
@@ -75,7 +74,7 @@ func (s *socket) writer(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			if s.statusQuotum() == 1 {
+			if s.quotumIsLock() {
 				i := atomic.AddInt64(&s.quotum, -600)
 				s.sendQuotum(i, 1)
 				if i <= 0 {
@@ -86,16 +85,16 @@ func (s *socket) writer(ctx context.Context) {
 			if msg.from != s.conn || msg.force {
 				writer, err := s.conn.NextWriter(msg.mType)
 				if err != nil {
-					log.Println(s.conn.RemoteAddr().String(), err)
+					s.log(err)
 					return
 				}
 				if _, err := writer.Write(msg.message); err != nil {
-					log.Println(s.conn.RemoteAddr().String(), err)
+					s.log(err)
 					return
 				}
 
 				if err = writer.Close(); err != nil {
-					log.Println(s.conn.RemoteAddr().String(), err)
+					s.log(err)
 					return
 				}
 			}
@@ -115,10 +114,10 @@ type socketPayload struct {
 //reader
 func (s *socket) reader() {
 	ctx, cancel := context.WithCancel(context.Background())
-	atomic.AddInt64(&onlineAtom, 1)
+	atomic.AddInt64(&online, 1)
 	defer func() {
 		cancel()
-		atomic.AddInt64(&onlineAtom, -1)
+		atomic.AddInt64(&online, -1)
 		clients.Delete(s.message)
 		close(s.message)
 		s.conn.Close()
@@ -130,26 +129,26 @@ func (s *socket) reader() {
 	for {
 		mt, reader, err := s.conn.NextReader()
 		if err != nil {
-			log.Println(s.conn.RemoteAddr().String(), err)
+			s.log(err)
 			return
 		}
 
 		buf, err := ioutil.ReadAll(reader)
 		if err != nil && err != io.ErrUnexpectedEOF {
-			log.Println(s.conn.RemoteAddr().String(), err)
+			s.log(err)
 			return
 		}
 
 		var sp socketPayload
 		if err := json.Unmarshal(buf, &sp); err != nil {
-			log.Println(err)
+			s.log(err)
 		}
 
 		if countQuota, ok := s.quotumAllow(len(sp.Data.Points)); !ok {
 			s.sendQuotum(countQuota, mt)
 			continue
 		}
-		broadcast <- &Data{from: s.conn, mType: mt, force: false, message: buf}
+		broadcast <- &data{from: s.conn, mType: mt, force: false, message: buf}
 		circularBuf.mu.Lock()
 		circularBuf.rbuf.Value = buf
 		circularBuf.rbuf = circularBuf.rbuf.Next()
@@ -160,21 +159,16 @@ func (s *socket) reader() {
 func (s *socket) sendHistory() {
 	circularBuf.mu.RLock()
 	defer circularBuf.mu.RUnlock()
-	if circularBuf.rbuf.Len() < 1 {
-		return
-	}
-	circularBuf.rbuf.Do(func(msg interface{}) {
-		data, ok := msg.([]byte)
-		if !ok {
-			return
+	circularBuf.rbuf.Do(func(val interface{}) {
+		if msg, ok := val.([]byte); ok {
+			s.message <- data{from: s.conn, mType: 1, force: true, message: msg}
 		}
-		s.message <- Data{from: s.conn, mType: 1, force: true, message: data}
 	})
 }
 
 //quotumAllow
 func (s *socket) quotumAllow(count int) (int64, bool) {
-	if s.statusQuotum() == 1 {
+	if s.quotumIsLock() {
 		return atomic.LoadInt64(&s.quotum), false
 	}
 	i := atomic.LoadInt64(&s.quotum)
@@ -187,20 +181,20 @@ func (s *socket) quotumAllow(count int) (int64, bool) {
 }
 
 func (s *socket) lockQuotum() {
-	if atomic.LoadUint32(&s.quotumLock) == 1 {
+	if s.quotumIsLock() {
 		return
 	}
 	atomic.StoreUint32(&s.quotumLock, 1)
 }
 
 func (s *socket) unlockQuotum() {
-	if atomic.LoadUint32(&s.quotumLock) == 1 {
+	if s.quotumIsLock() {
 		atomic.StoreUint32(&s.quotumLock, 0)
 	}
 }
 
-func (s *socket) statusQuotum() uint32 {
-	return atomic.LoadUint32(&s.quotumLock)
+func (s *socket) quotumIsLock() bool {
+	return atomic.LoadUint32(&s.quotumLock) == 1
 }
 
 //sendQuotum
@@ -209,8 +203,13 @@ func (s *socket) sendQuotum(quotum int64, mt int) {
 		ID:    2,
 		Count: quotum,
 	}
-	data, _ := json.Marshal(sp)
-	s.message <- Data{from: s.conn, mType: mt, force: true, message: data}
+	if msg, err := json.Marshal(sp); err == nil {
+		s.message <- data{from: s.conn, mType: mt, force: true, message: msg}
+	}
+}
+
+func (s *socket) log(err error) {
+	log.Println(s.conn.RemoteAddr().String(), err)
 }
 
 //upgrade
@@ -220,29 +219,23 @@ func upgrade(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
-	s := &socket{conn: ws, message: make(chan Data, 100000)}
+	s := &socket{conn: ws, message: make(chan data, 100000)}
 	go s.reader()
 }
 
 //online
-func online(w http.ResponseWriter, r *http.Request) {
-	total := atomic.LoadInt64(&onlineAtom)
+func onlineHandle(w http.ResponseWriter, r *http.Request) {
+	total := atomic.LoadInt64(&online)
 	fmt.Fprint(w, total)
-}
-
-//printVersion
-func printVersion(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, version)
 }
 
 func main() {
 	fs := http.FileServer(http.Dir("./web"))
 	http.Handle("/", fs)
 
-	http.HandleFunc("/online", online)
-	http.HandleFunc("/version", printVersion)
-	http.HandleFunc("/ws", upgrade)
 	go handleMessages()
-	log.Println("run")
+
+	http.HandleFunc("/online", onlineHandle)
+	http.HandleFunc("/ws", upgrade)
 	log.Fatal(http.ListenAndServe(":80", nil))
 }
