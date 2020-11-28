@@ -13,7 +13,7 @@ RUN mkdir -p /home/go/app
 RUN mkdir -p /usr/local/go/lib/time
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o /home/go/app/drawio main.go
 
-FROM ubuntu
+FROM scratch
 COPY --from=builder /home/go/app /home/go/app
 WORKDIR /home/go/app
 COPY --from=builder /home/go/app/drawio /home/go/app/drawio
