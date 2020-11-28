@@ -18,6 +18,5 @@ COPY --from=builder /home/go/app /home/go/app
 WORKDIR /home/go/app
 COPY --from=builder /home/go/app/drawio /home/go/app/drawio
 COPY --from=front /home/go/app/dist /home/go/app/web
-WORKDIR /home/go/app
 EXPOSE 80
 ENTRYPOINT ["/home/go/app/drawio"]

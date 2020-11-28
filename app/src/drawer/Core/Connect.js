@@ -11,7 +11,8 @@ export default class Connect {
      * @param {Function} callback
      */
     constructor(host, callback) {
-        this._socket = new WebSocket(`ws://${host}/ws`);
+        this._socket = new WebSocket(location.origin.replace(/^http/, 'ws') + "/ws");
+
         this._socket.onmessage = (event) => {
             let pack = JSON.parse(event.data);
             callback(pack.data);
